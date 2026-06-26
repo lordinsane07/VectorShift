@@ -1,0 +1,633 @@
+/* ============================================================
+   VectorShift Pipeline Builder — Cyber-Glass Design System
+   ============================================================ */
+
+/* --- Global Base --- */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Inter', system-ui, sans-serif;
+  background: var(--bg-canvas);
+  color: var(--text-primary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* --- Tokens --- */
+:root {
+  /* Canvas */
+  --bg-canvas: #080b14;
+
+  /* Surfaces — glass layers */
+  --bg-surface: rgba(15, 20, 35, 0.75);
+  --bg-elevated: rgba(25, 32, 55, 0.85);
+  --bg-glass: rgba(255, 255, 255, 0.04);
+
+  /* Borders */
+  --border: rgba(255, 255, 255, 0.08);
+  --border-bright: rgba(255, 255, 255, 0.15);
+
+  /* Text */
+  --text-primary: #f0f4ff;
+  --text-secondary: #8892b0;
+  --text-muted: #3d4a6b;
+
+  /* Accents */
+  --accent-primary: #6366f1;
+  --accent-glow: rgba(99, 102, 241, 0.4);
+  --success: #10b981;
+  --success-glow: rgba(16, 185, 129, 0.3);
+  --danger: #ef4444;
+  --danger-glow: rgba(239, 68, 68, 0.3);
+
+  /* Node accent — injected per node via inline style */
+  --node-accent: #6366f1;
+  --node-accent-glow: rgba(99, 102, 241, 0.25);
+
+  /* Blur values */
+  --blur-glass: blur(16px);
+  --blur-node: blur(12px);
+
+  /* Spacing */
+  --radius-node: 12px;
+  --radius-field: 7px;
+  --radius-toolbar: 20px;
+}
+
+/* --- App Layout --- */
+.vs-app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  width: 100vw;
+}
+
+/* --- Canvas --- */
+.vs-canvas {
+  flex: 1;
+  width: 100%;
+  background: var(--bg-canvas);
+  position: relative;
+}
+
+/* --- Toolbar --- */
+.vs-toolbar {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  backdrop-filter: blur(20px) saturate(180%);
+  background: rgba(10, 14, 28, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-toolbar);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.05);
+  padding: 10px 20px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  z-index: 100;
+}
+
+.vs-toolbar__brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-right: 12px;
+}
+
+.vs-toolbar__logo {
+  font-size: 20px;
+  line-height: 1;
+}
+
+.vs-toolbar__wordmark {
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--text-primary);
+  white-space: nowrap;
+}
+
+.vs-toolbar__nodes {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.vs-toolbar__group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.vs-toolbar__group-label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.vs-toolbar__chips {
+  display: flex;
+  gap: 6px;
+}
+
+/* Toolbar node chips */
+.vs-toolbar__chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-family: var(--font-ui);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: var(--text-primary);
+  border-left: 2px solid var(--node-accent);
+  cursor: grab;
+  transition: all 0.15s ease;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.vs-toolbar__chip:hover {
+  background: rgba(255, 255, 255, 0.1);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px var(--node-accent-glow);
+}
+
+.vs-toolbar__chip:active {
+  cursor: grabbing;
+  transform: translateY(0);
+}
+
+.vs-toolbar__chip-icon {
+  font-size: 14px;
+}
+
+/* --- Node Cards --- */
+.vs-node {
+  background: rgba(12, 17, 32, 0.7);
+  backdrop-filter: var(--blur-node);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-node);
+  border-top: 2px solid var(--node-accent);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  min-width: 220px;
+  transition: all 0.18s ease;
+  position: relative;
+  overflow: visible;
+}
+
+.vs-node:hover,
+.react-flow__node.selected .vs-node {
+  border-color: rgba(255, 255, 255, 0.18);
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.5), 0 0 0 1px var(--node-accent), 0 0 20px var(--node-accent-glow);
+  transform: translateY(-2px);
+}
+
+.vs-node--text {
+  min-width: 220px;
+  transition: width 0.1s ease, height 0.1s ease, box-shadow 0.18s ease, border-color 0.18s ease, transform 0.18s ease;
+}
+
+/* Node header */
+.vs-node__header {
+  background: rgba(255, 255, 255, 0.03);
+  border-bottom: 1px solid var(--border);
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-radius: var(--radius-node) var(--radius-node) 0 0;
+}
+
+.vs-node__icon {
+  font-size: 14px;
+}
+
+.vs-node__title {
+  font-family: var(--font-ui);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+/* Node body */
+.vs-node__body {
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.vs-node__body--text {
+  padding: 8px;
+  flex: 1;
+}
+
+.vs-node__description {
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* --- Fields --- */
+.vs-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.vs-field__label {
+  font-family: var(--font-ui);
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+
+.vs-field__input,
+.vs-field__select,
+.vs-field__textarea {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-field);
+  color: var(--text-primary);
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 12px;
+  line-height: 1.5;
+  padding: 7px 10px;
+  width: 100%;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  outline: none;
+}
+
+.vs-field__input:focus,
+.vs-field__select:focus,
+.vs-field__textarea:focus {
+  border-color: var(--node-accent);
+  box-shadow: 0 0 0 3px var(--node-accent-glow);
+  outline: none;
+}
+
+.vs-field__input::placeholder,
+.vs-field__textarea::placeholder {
+  color: var(--text-muted);
+}
+
+.vs-field__select {
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M3 4.5L6 7.5L9 4.5' stroke='%238892b0' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  padding-right: 28px;
+}
+
+.vs-field__select option {
+  background: rgba(12, 17, 32, 1);
+  color: var(--text-primary);
+}
+
+.vs-field__textarea {
+  resize: none;
+  font-family: 'JetBrains Mono', monospace;
+  min-height: 56px;
+}
+
+.vs-field__textarea--text {
+  flex: 1;
+  min-height: unset;
+  height: 100%;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  line-height: 20px;
+  border: none;
+  background: transparent;
+  padding: 6px 8px;
+  border-radius: 0;
+}
+
+.vs-field__textarea--text:focus {
+  box-shadow: none;
+}
+
+/* --- Handles --- */
+.vs-handle {
+  width: 12px !important;
+  height: 12px !important;
+  border-radius: 50% !important;
+  transition: all 0.15s ease !important;
+}
+
+.vs-handle--input {
+  background: var(--bg-canvas) !important;
+  border: 2px solid var(--text-muted) !important;
+}
+
+.vs-handle--input:hover {
+  border-color: var(--node-accent) !important;
+  box-shadow: 0 0 8px var(--node-accent-glow) !important;
+}
+
+.vs-handle--output {
+  background: var(--node-accent) !important;
+  border: none !important;
+  box-shadow: 0 0 8px var(--node-accent-glow) !important;
+}
+
+.vs-handle--output:hover {
+  animation: pulse 2s infinite ease-in-out;
+}
+
+.vs-handle-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  font-weight: 500;
+  color: var(--text-muted);
+  position: absolute;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+.vs-handle-label--left {
+  right: calc(100% + 8px);
+  transform: translateY(-50%);
+  top: 50%;
+}
+
+.vs-handle-label--right {
+  left: calc(100% + 8px);
+  transform: translateY(-50%);
+  top: 50%;
+}
+
+/* --- Submit Bar & Button --- */
+.vs-submit {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.vs-submit-btn {
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  background-size: 200% 200%;
+  animation: gradientShift 3s ease infinite;
+  border: none;
+  border-radius: 10px;
+  color: white;
+  font-family: var(--font-ui);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 10px 24px;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(99, 102, 241, 0.4);
+  transition: transform 0.15s, box-shadow 0.15s;
+  letter-spacing: 0.02em;
+}
+
+.vs-submit-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 24px rgba(99, 102, 241, 0.6);
+}
+
+.vs-submit-btn:active {
+  transform: translateY(0);
+}
+
+.vs-submit-btn--loading {
+  opacity: 0.7;
+  cursor: not-allowed;
+  animation: none;
+}
+
+/* --- Result Modal --- */
+.vs-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: fadeIn 0.2s ease;
+}
+
+.vs-modal {
+  background: rgba(12, 17, 32, 0.95);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 16px;
+  padding: 28px 32px;
+  min-width: 320px;
+  max-width: 420px;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.05);
+  animation: slideUp 0.25s ease;
+}
+
+.vs-modal__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+  padding: 0;
+  border-bottom: none;
+}
+
+.vs-modal__title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+  letter-spacing: 0.02em;
+}
+
+.vs-modal__close {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 18px;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: var(--radius-field);
+  transition: all 0.15s ease;
+  line-height: 1;
+}
+
+.vs-modal__close:hover {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.vs-modal__body {
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+}
+
+.vs-result-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+  background: transparent;
+  border-radius: 0;
+}
+
+.vs-result-row:last-child {
+  border-bottom: none;
+}
+
+.vs-result-row--error {
+  justify-content: flex-start;
+  gap: 10px;
+  padding: 12px;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  border-radius: 8px;
+}
+
+.vs-result-row__icon {
+  font-size: 16px;
+}
+
+.vs-result-row__label {
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.vs-result-row__value {
+  font-weight: 600;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.vs-result-row__value--success {
+  color: var(--success);
+}
+
+.vs-result-row__value--danger {
+  color: var(--danger);
+}
+
+.vs-result-row__text {
+  color: var(--danger);
+  line-height: 1.4;
+}
+
+/* --- ReactFlow Overrides --- */
+.react-flow__node {
+  padding: 0 !important;
+  background: none !important;
+  border: none !important;
+}
+
+.react-flow__background {
+  background-color: var(--bg-canvas) !important;
+}
+
+.react-flow__edge-path {
+  stroke: rgba(255, 255, 255, 0.2) !important;
+  stroke-width: 1.5 !important;
+}
+
+.react-flow__edge.selected .react-flow__edge-path,
+.react-flow__edge:hover .react-flow__edge-path {
+  stroke: var(--accent-primary) !important;
+  stroke-width: 2 !important;
+  filter: drop-shadow(0 0 4px var(--accent-glow));
+}
+
+.react-flow__connection-line {
+  stroke: var(--accent-primary) !important;
+  stroke-width: 1.5 !important;
+}
+
+.react-flow__controls {
+  background: var(--bg-elevated) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 10px !important;
+  overflow: hidden;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4) !important;
+}
+
+.react-flow__controls-button {
+  background: transparent !important;
+  border-bottom: 1px solid var(--border) !important;
+  color: var(--text-secondary) !important;
+  fill: var(--text-secondary) !important;
+  width: 28px !important;
+  height: 28px !important;
+}
+
+.react-flow__controls-button:hover {
+  background: rgba(255, 255, 255, 0.05) !important;
+  color: var(--text-primary) !important;
+  fill: var(--text-primary) !important;
+}
+
+.react-flow__controls-button svg {
+  fill: inherit !important;
+  max-width: 14px;
+  max-height: 14px;
+}
+
+.react-flow__minimap {
+  background: var(--bg-elevated) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 10px !important;
+}
+
+.react-flow__attribution {
+  display: none;
+}
+
+/* --- Animations --- */
+@keyframes pulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.2); opacity: 0.8; }
+}
+
+@keyframes gradientShift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes meshDrift {
+  0%, 100% { transform: translate(0, 0); }
+  33% { transform: translate(30px, -20px); }
+  66% { transform: translate(-20px, 30px); }
+}

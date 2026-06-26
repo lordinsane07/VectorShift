@@ -1,0 +1,33 @@
+# Python / Backend
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/
+env.bak/
+venv.bak/
+
+# Environment variables & Security
+.env
+.env.*
+*.pem
+*.key
+secrets/
+
+# OS specific
+.DS_Store
+Thumbs.db
+
+# Project Specific Documents (Useless for Git)
+prd.md
+*.pdf
+VectorShift*.pdf
+
+# Node / Frontend (fallback)
+node_modules/
+build/
+dist/
+.env.local
