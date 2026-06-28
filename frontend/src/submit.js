@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { useStore } from './store';
 import { shallow } from 'zustand/shallow';
 
@@ -95,8 +96,9 @@ export const SubmitButton = () => {
         {loading ? 'Analyzing…' : 'Run Pipeline'}
       </button>
 
-      {(result || error) && (
-        <ResultModal result={result} error={error} onClose={closeModal} />
+      {(result || error) && createPortal(
+        <ResultModal result={result} error={error} onClose={closeModal} />,
+        document.body
       )}
     </div>
   );
